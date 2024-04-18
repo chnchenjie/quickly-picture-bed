@@ -15,6 +15,7 @@ import { User as UserType } from 'src/user/entities/user.entity'
 export class AuthorController {
   constructor(private readonly authorService: AuthorService) {}
 
+  
   @Post('create')
   @HttpCode(200)
   @ApiOperation({ summary: '新增作者', description: '新增作者' })
@@ -77,5 +78,25 @@ export class AuthorController {
   })
   remove(@Body('id') id: number, @User() user: UserType) {
     return this.authorService.remove(id, user.id);
+  }
+
+  @Post('toggleSchedule')
+  @HttpCode(200)
+  @ApiOperation({ summary: '切换定时任务', description: '切换定时任务' })
+  @ApiResponse({ status: 200, description: '切换成功' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'number',
+          default: 1,
+          description: '作者id'
+        }
+      }
+    }
+  })
+  toggleSchedule(@Body('id') id: number, @User() user: UserType) {
+    return this.authorService.toggleSchedule(id, user.id)
   }
 }

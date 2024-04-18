@@ -28,7 +28,7 @@ export class VerifyCodeService {
    */
   sendMail (text: string, to: string, subject: string = 'LightFastPicture') {
     var user = '1825956830@qq.com' // 自己的邮箱
-    var pass = 'stjflvegjjumbbfa' // 邮箱授权码
+    var pass = 'hgnpyqcvxlwufdbg' // 邮箱授权码
     let transporter = nodemailer.createTransport({
       host: "smtp.qq.com",
       port: 587,

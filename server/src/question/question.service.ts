@@ -46,10 +46,10 @@ export class QuestionService {
         question_author_avatar: author.avatarUrl || author.avatarUrlTemplate,
         question_created: created,
         question_updated: updatedTime,
+        status: false,
         uid: uid
       })
       // 创建完任务后立马启用通知
-      this.startNotify(cron, createQuestionDto.quesion_id, uid)
       return question
     } catch (error) {
       return {
@@ -67,10 +67,11 @@ export class QuestionService {
    */
   async findAll(param: QuestionFilter, uid: number) {
     const { page, size, search, status } = param
+    console.log(search)
     const data: any = {}
     const tmp: any = {
       order: [
-        ['question_updated', 'desc']
+        ['createdAt', 'desc']
       ],
       where: {
         uid: uid,
@@ -144,12 +145,12 @@ export class QuestionService {
    * @param quesion_id 
    * @param uid 
    */
-  update (updateDto: UpdateQuestionDto, quesion_id: string, uid: number) {
+  update (updateDto: UpdateQuestionDto, id: number, uid: number) {
     return this.questionModel.update({
       ...updateDto
     }, {
       where: {
-        quesion_id: quesion_id,
+        id,
         uid
       }
     })
@@ -165,7 +166,7 @@ export class QuestionService {
    */
   sendMail (text: string, to: string, subject: string = 'LightFastPicture') {
     var user = '1825956830@qq.com' // 自己的邮箱
-    var pass = 'stjflvegjjumbbfa' // 邮箱授权码
+    var pass = 'hgnpyqcvxlwufdbg' // 邮箱授权码
     let transporter = nodemailer.createTransport({
       host: "smtp.qq.com",
       port: 587,
@@ -198,9 +199,11 @@ export class QuestionService {
   /**
    * 开始通知：创建定时任务
    * @param time 
-   * @param question_id 
+   * @param obj 
+   * @param uid 
    */
-  startNotify (time: string, question_id: string, uid: number) {
+  startNotify (time: string, obj: { id: number; question_id: string }, uid: number) {
+    const {id, question_id  } = obj
     const job = new CronJob(time, async () => {
       // 在这里编写查询是否变红包任务的逻辑
       try {
@@ -219,12 +222,13 @@ export class QuestionService {
             await this.update({
               question_red_money: money,
               question_red_count: count_down_value,
-              notify_status: true
-            }, question_id, uid)
+              notify_status: true,
+              status: false
+            }, id, uid)
+            // 第三步：关闭并删除定时任务
+            this.stopNotify(question_id)
+            this.deleteNotify(question_id)
           }
-          // 第三步：关闭并删除定时任务
-          this.stopNotify(question_id)
-          this.deleteNotify(question_id)
         }
       } catch (error) {
         // 不是红包问题：继续定时任务
@@ -241,9 +245,12 @@ export class QuestionService {
    * @param question_id 
    */
   stopNotify (question_id: string) {
-    const job = this.scheduleRegistry.getCronJob(question_id)
-    job && job.stop()
-    this.logger.warn(`job ${question_id} stopped!`)
+    const jobs = this.scheduleRegistry.getCronJobs()
+    if (jobs.has(question_id)) {
+      const job = this.scheduleRegistry.getCronJob(question_id)
+      job && job.stop()
+      this.logger.warn(`job ${question_id} stopped!`)
+    }
   }
 
   /**
@@ -251,24 +258,12 @@ export class QuestionService {
    * @param question_id 
    */
   deleteNotify (question_id: string) {
-    this.scheduleRegistry.deleteCronJob(question_id)
-    this.logger.warn(`job ${question_id} deleted!`)
-  }
-
-  /**
-   * 开启定时任务
-   * @param ids 
-   * @param uid 
-   * @returns 
-   */
-  async startSchedule (ids: number[], uid) {
-    const promises = ids.map(id => this.findOne(id, uid))
-    const quesions = await Promise.all(promises)
-    const questionPromises = quesions.filter(quesion => quesion && quesion.id && !quesion.notify_status).map(quesion => {
-      this.startNotify(cron, quesion.quesion_id, uid)
-      return this.update({ status: true }, quesion.quesion_id, uid)
-    })
-    return Promise.all(questionPromises)
+    const jobs = this.scheduleRegistry.getCronJobs()
+    if (jobs.has(question_id)) {
+      const job = this.scheduleRegistry.getCronJob(question_id)
+      job && this.scheduleRegistry.deleteCronJob(question_id)
+      this.logger.warn(`job ${question_id} deleted!`)
+    }
   }
 
   /**
@@ -277,14 +272,24 @@ export class QuestionService {
    * @param uid 
    * @returns 
    */
-  async stopSchedule (ids: number[], uid) {
-    const promises = ids.map(id => this.findOne(id, uid))
-    const quesions = await Promise.all(promises)
-    const questionPromises = quesions.filter(quesion => quesion && quesion.id && !quesion.notify_status).map(quesion => {
+  async toggleSchedule (id: number, uid) {
+    const quesion = await this.findOne(id, uid)
+    if (quesion.status) {
       this.stopNotify(quesion.quesion_id)
       this.deleteNotify(quesion.quesion_id)
-      return this.update({ status: false }, quesion.quesion_id, uid)
+    } else {
+      this.startNotify(cron, {
+        id: id,
+        question_id: quesion.quesion_id
+      }, uid)
+    }
+    return this.questionModel.update({
+      status: !quesion.status
+    }, {
+      where: {
+        id,
+        uid
+      }
     })
-    return Promise.all(questionPromises)
   }
 }

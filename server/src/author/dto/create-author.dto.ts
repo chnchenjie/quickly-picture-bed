@@ -8,11 +8,11 @@ export class CreateAuthorDto {
   @ApiProperty({ description: '作者id' })
   author_id: string
 
-  @ApiProperty({ description: '作者名称' })
-  author_name: string
+  // @ApiProperty({ description: '作者名称' })
+  // author_name: string
 
-  @ApiProperty({ description: '作者头像' })
-  author_avatar: string
+  // @ApiProperty({ description: '作者头像' })
+  // author_avatar: string
 
   @ApiProperty({ description: '是否为机构账号' })
   is_org: boolean
@@ -20,8 +20,8 @@ export class CreateAuthorDto {
   @ApiProperty({ description: '最新问题id' })
   last_question_id: string
 
-  @ApiProperty({ description: '通知状态' })
-  status?: boolean
+  // @ApiProperty({ description: '通知状态' })
+  // status?: boolean
 }
 
 

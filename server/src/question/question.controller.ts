@@ -71,49 +71,23 @@ export class QuestionController {
     return this.questionService.remove(id, user.id);
   }
 
-  @Post('startSchedule')
+  @Post('toggleSchedule')
   @HttpCode(200)
-  @ApiOperation({ summary: '启用定时任务', description: '启用定时任务' })
-  @ApiResponse({ status: 200, description: '启用成功' })
+  @ApiOperation({ summary: '切换定时任务', description: '切换定时任务' })
+  @ApiResponse({ status: 200, description: '切换成功' })
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
-        ids: {
-          type: 'array',
-          items: {
-            type: 'number',
-          },
-          default: [],
-          description: '问题ids'
+        id: {
+          type: 'number',
+          default: 1,
+          description: '问题id'
         }
       }
     }
   })
-  startSchedule(@Body('ids') ids: number[], @User() user: UserType) {
-    return this.questionService.startSchedule(ids, user.id)
-  }
-
-  @Post('stopSchedule')
-  @HttpCode(200)
-  @ApiOperation({ summary: '关闭定时任务', description: '关闭定时任务' })
-  @ApiResponse({ status: 200, description: '关闭成功' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        ids: {
-          type: 'array',
-          items: {
-            type: 'number',
-          },
-          default: [],
-          description: '问题ids'
-        }
-      }
-    }
-  })
-  stopSchedule(@Body('ids') ids: number[], @User() user: UserType) {
-    return this.questionService.stopSchedule(ids, user.id)
+  toggleSchedule(@Body('id') id: number, @User() user: UserType) {
+    return this.questionService.toggleSchedule(id, user.id)
   }
 }
