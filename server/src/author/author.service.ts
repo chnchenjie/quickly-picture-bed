@@ -93,6 +93,12 @@ export class AuthorService {
       status: false,
       uid
     })
+    // 新建用户就新建一条记录：否则会导致第一次通知时通知到最新的问题上
+    await this.notifyHistoryModel.create({
+      author_id: author_id,
+      question_id: last_question_id,
+      uid
+    })
     return data
   }
 
@@ -111,17 +117,19 @@ export class AuthorService {
       ],
       where: {
         uid: uid,
-        author_id: {
-          [Op.like]: search ? `%${search}%` : '%%'
-        },
-        author_name: {
-          [Op.like]: search ? `%${search}%` : '%%'
-        },
-        author_avatar: {
-          [Op.like]: search ? `%${search}%` : '%%'
-        },
-        last_question_id: {
-          [Op.like]: search ? `%${search}%` : '%%'
+        [Op.or]: {
+          author_id: {
+            [Op.like]: search ? `%${search}%` : '%%'
+          },
+          author_name: {
+            [Op.like]: search ? `%${search}%` : '%%'
+          },
+          author_avatar: {
+            [Op.like]: search ? `%${search}%` : '%%'
+          },
+          last_question_id: {
+            [Op.like]: search ? `%${search}%` : '%%'
+          }
         }
       }
     }
@@ -184,8 +192,8 @@ export class AuthorService {
       }
     })
     if (data) {
-      this.stopNotify(data.author_id)
-      this.deleteNotify(data.author_id)
+      this.stopNotify(data.author_id + `-${data.author_type}-` + data.id)
+      this.deleteNotify(data.author_id + `-${data.author_type}-` + data.id)
     }
     return this.authorModel.destroy({
       where: {
@@ -243,9 +251,9 @@ export class AuthorService {
       }
     })
 
-    this.scheduleRegistry.addCronJob(author_id, job)
+    this.scheduleRegistry.addCronJob(author_id + '-publisher-' + id, job)
     job.start()
-    this.logger.warn(`job ${author_id} added!`)
+    this.logger.warn(`job ${author_id + '-publisher-' + id} added!`)
   }
 
   /**
@@ -368,9 +376,9 @@ export class AuthorService {
       }
     })
 
-    this.scheduleRegistry.addCronJob(author_id, job)
+    this.scheduleRegistry.addCronJob(author_id + '-answer-' + id, job)
     job.start()
-    this.logger.warn(`job ${author_id} added!`)
+    this.logger.warn(`job ${author_id + '-answer-' + id} added!`)
   }
 
   /**
@@ -410,8 +418,8 @@ export class AuthorService {
   async toggleSchedule (id: number, uid) {
     const author = await this.findOne(id, uid)
     if (author.status) {
-      this.stopNotify(author.author_id)
-      this.deleteNotify(author.author_id)
+      this.stopNotify(author.author_id + `-${author.author_type}-` + author.id)
+      this.deleteNotify(author.author_id + `-${author.author_type}-` + author.id)
     } else {
       if (author.author_type === 'answer') {
         this.startAnswerNotify(schedule_answer_cron, author, uid)

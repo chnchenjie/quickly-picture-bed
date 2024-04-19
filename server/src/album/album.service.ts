@@ -70,11 +70,13 @@ export class AlbumService {
       ],
       where: {
         uid: uid,
-        name: {
-          [Op.like]: search ? `%${search}%` : '%%'
-        },
-        desc: {
-          [Op.like]: search ? `%${search}%` : '%%'
+        [Op.or]: {
+          name: {
+            [Op.like]: search ? `%${search}%` : '%%'
+          },
+          desc: {
+            [Op.like]: search ? `%${search}%` : '%%'
+          }
         }
       }
     }

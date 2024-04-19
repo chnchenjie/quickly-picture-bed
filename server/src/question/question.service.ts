@@ -76,14 +76,16 @@ export class QuestionService {
       ],
       where: {
         uid: uid,
-        question_title: {
-          [Op.like]: search ? `%${search}%` : '%%'
-        },
-        question_desc: {
-          [Op.like]: search ? `%${search}%` : '%%'
-        },
-        question_author_name: {
-          [Op.like]: search ? `%${search}%` : '%%'
+        [Op.or]: {
+          question_title: {
+            [Op.like]: search ? `%${search}%` : '%%'
+          },
+          question_desc: {
+            [Op.like]: search ? `%${search}%` : '%%'
+          },
+          question_author_name: {
+            [Op.like]: search ? `%${search}%` : '%%'
+          }
         }
       }
     }
@@ -129,8 +131,8 @@ export class QuestionService {
       }
     })
     if (data) {
-      this.stopNotify(data.quesion_id)
-      this.deleteNotify(data.quesion_id)
+      this.stopNotify(data.quesion_id + '-' + data.id)
+      this.deleteNotify(data.quesion_id + '-' + data.id)
     }
     return this.questionModel.destroy({
       where: {
@@ -194,8 +196,8 @@ export class QuestionService {
               status: false
             }, id, uid)
             // 第三步：关闭并删除定时任务
-            this.stopNotify(question_id)
-            this.deleteNotify(question_id)
+            this.stopNotify(question_id + '-' + id)
+            this.deleteNotify(question_id + '-' + id)
           }
         }
       } catch (error) {
@@ -203,9 +205,9 @@ export class QuestionService {
         console.log(error)
       }
     })
-    this.scheduleRegistry.addCronJob(question_id, job)
+    this.scheduleRegistry.addCronJob(question_id + '-' + id, job)
     job.start()
-    this.logger.warn(`job ${question_id} added!`)
+    this.logger.warn(`job ${question_id + '-' + id} added!`)
   }
 
   /**
@@ -243,8 +245,8 @@ export class QuestionService {
   async toggleSchedule (id: number, uid) {
     const quesion = await this.findOne(id, uid)
     if (quesion.status) {
-      this.stopNotify(quesion.quesion_id)
-      this.deleteNotify(quesion.quesion_id)
+      this.stopNotify(quesion.quesion_id + '-' + quesion.id)
+      this.deleteNotify(quesion.quesion_id + '-' + quesion.id)
     } else {
       this.startNotify(schedule_question_cron, {
         id: id,
