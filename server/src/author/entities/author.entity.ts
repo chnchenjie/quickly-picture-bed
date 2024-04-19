@@ -29,6 +29,13 @@ export class Author extends Model<Author> {
 
   @Column({
     allowNull: false,
+    comment: '账号类型',
+    defaultValue: 'publisher'
+  })
+  author_type: 'answer' | 'publisher'
+
+  @Column({
+    allowNull: false,
     comment: '是否为机构账号',
     defaultValue: false
   })

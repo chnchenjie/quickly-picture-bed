@@ -4,11 +4,13 @@ import { QuestionController } from './question.controller';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { Question } from './entities/question.entity';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ToolModule } from 'src/tool/tool.module';
 
 @Module({
   imports: [
     SequelizeModule.forFeature([Question]),
-    ScheduleModule.forRoot()
+    ScheduleModule.forRoot(),
+    ToolModule
   ],
   controllers: [QuestionController],
   providers: [QuestionService],

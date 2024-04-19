@@ -8,15 +8,16 @@ import * as cheerio from 'cheerio'
 import { Op } from 'sequelize';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { CronJob } from 'cron';
-import * as nodemailer from 'nodemailer'
-const cron = '10 * * * * *'
+import { ToolService } from 'src/tool/tool.service';
+import { notify_emails, schedule_question_cron } from 'global.config';
 
 @Injectable()
 export class QuestionService {
   private readonly logger = new Logger(QuestionService.name)
   constructor (
     @InjectModel(Question) private questionModel: typeof Question,
-    private scheduleRegistry: SchedulerRegistry
+    private scheduleRegistry: SchedulerRegistry,
+    private readonly toolService: ToolService,
   ) {}
 
   /**
@@ -156,46 +157,6 @@ export class QuestionService {
     })
   }
 
-  
-  /**
-   * 发送邮件
-   * @param text 验证码
-   * @param to 收件人邮箱
-   * @param subject 标题
-   * @returns 
-   */
-  sendMail (text: string, to: string, subject: string = 'LightFastPicture') {
-    var user = '1825956830@qq.com' // 自己的邮箱
-    var pass = 'hgnpyqcvxlwufdbg' // 邮箱授权码
-    let transporter = nodemailer.createTransport({
-      host: "smtp.qq.com",
-      port: 587,
-      secure: false,
-      //配置发送者的邮箱服务器和登录信息
-      // service:'qq', // 163、qq等
-      auth: {
-        user: user, // 用户账号
-        pass: pass, //授权码,通过QQ获取
-      },
-    })
-    return new Promise((resolve, reject) => {
-      if (pass && user) {
-        transporter.sendMail({
-          from: `<${user}>`,
-          to: `<${to}>`,
-          subject: subject,
-          html: `${text}`,
-        }).then(() => {
-          resolve(true)
-        }).catch(error => {
-          reject(error)
-        })
-      } else {
-        reject(new Error('未配置邮件服务'))
-      }
-    })
-  }
-
   /**
    * 开始通知：创建定时任务
    * @param time 
@@ -203,9 +164,14 @@ export class QuestionService {
    * @param uid 
    */
   startNotify (time: string, obj: { id: number; question_id: string }, uid: number) {
-    const {id, question_id  } = obj
+    const { id, question_id  } = obj
     const job = new CronJob(time, async () => {
       // 在这里编写查询是否变红包任务的逻辑
+      const last_question = await this.questionModel.findOne({
+        where: {
+          id
+        }
+      })
       try {
         const res = await axios({
           url: `https://www.zhihu.com/api/v4/brand/questions/${question_id}/activity/red-packet`
@@ -213,7 +179,9 @@ export class QuestionService {
         const { content, title, count_down_value } = res.data
         if (count_down_value) {
           // 第一步：邮箱通知
-          await this.sendMail(content, 'itchenliang@163.com')
+          await Promise.all(notify_emails.map((email) => {
+            return this.toolService.sendZhihuMail(`【${last_question.question_title}】问题变红包了，<a href="https://www.zhihu.com/question/${question_id}" target="_blank">赶快去回答吧</a>！${content}`, email)
+          }))
           // 第二步：更新状态
           let money = 0
           const match = title.match(/\d+/)
@@ -278,7 +246,7 @@ export class QuestionService {
       this.stopNotify(quesion.quesion_id)
       this.deleteNotify(quesion.quesion_id)
     } else {
-      this.startNotify(cron, {
+      this.startNotify(schedule_question_cron, {
         id: id,
         question_id: quesion.quesion_id
       }, uid)

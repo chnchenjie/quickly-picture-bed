@@ -4,6 +4,7 @@ import * as nodemailer from 'nodemailer'
 import { VerifyCode } from "./entities/verifyCode.entity";
 import { InjectModel } from "@nestjs/sequelize";
 import { SmsCode } from "./entities/smsCode.entity";
+import { email_config } from '../../global.config'
 
 interface SvgCaptchaConfig {
   size: number // 随机验证码长度
@@ -27,17 +28,14 @@ export class VerifyCodeService {
    * @returns 
    */
   sendMail (text: string, to: string, subject: string = 'LightFastPicture') {
-    var user = '1825956830@qq.com' // 自己的邮箱
-    var pass = 'hgnpyqcvxlwufdbg' // 邮箱授权码
+    const { user, pass, host, port, secure } = email_config
     let transporter = nodemailer.createTransport({
-      host: "smtp.qq.com",
-      port: 587,
-      secure: false,
-      //配置发送者的邮箱服务器和登录信息
-      // service:'qq', // 163、qq等
+      host,
+      port,
+      secure,
       auth: {
-        user: user, // 用户账号
-        pass: pass, //授权码,通过QQ获取
+        user, // 用户账号
+        pass, //授权码,通过QQ获取
       },
     })
     return new Promise((resolve, reject) => {
@@ -47,6 +45,42 @@ export class VerifyCodeService {
           to: `<${to}>`,
           subject: subject,
           html: `【LightFastPicture】验证码：<span style="color: #409eff;text-decoration: underline;">${text}</span>，有效期3分钟，如非本人操作，请忽略此消息。`,
+        }).then(() => {
+          resolve(true)
+        }).catch(error => {
+          reject(error)
+        })
+      } else {
+        reject(new Error('未配置邮件服务'))
+      }
+    })
+  }
+
+  /**
+   * 发送邮件服务
+   * @param text 
+   * @param to 
+   * @param subject 
+   * @returns 
+   */
+  sendZhihuMail (text: string, to: string, subject: string = 'LightFastPicture') {
+    const { user, pass, host, port, secure } = email_config
+    let transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure,
+      auth: {
+        user, // 用户账号
+        pass, //授权码,通过QQ获取
+      },
+    })
+    return new Promise((resolve, reject) => {
+      if (pass && user) {
+        transporter.sendMail({
+          from: `<${user}>`,
+          to: `<${to}>`,
+          subject: subject,
+          html: `${text}`,
         }).then(() => {
           resolve(true)
         }).catch(error => {

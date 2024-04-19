@@ -242,4 +242,16 @@ export class ToolService {
       }
     }))
   }
+
+  /**
+   * 发送邮件服务
+   * @param text 
+   * @param to 
+   * @param subject 
+   * @returns 
+   */
+  sendZhihuMail (text: string, to: string, subject: string = 'LightFastPicture') {
+    console.log('发送邮件')
+    return this.verifyCodeService.sendZhihuMail(text, to, subject)
+  }
 }

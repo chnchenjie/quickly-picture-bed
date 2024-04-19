@@ -99,4 +99,12 @@ export class AuthorController {
   toggleSchedule(@Body('id') id: number, @User() user: UserType) {
     return this.authorService.toggleSchedule(id, user.id)
   }
+
+  @Post('stats')
+  @HttpCode(200)
+  @ApiOperation({ summary: '统计数据', description: '统计数据' })
+  @ApiResponse({ status: 200, description: '查询成功' })
+  stats(@User() user: UserType) {
+    return this.authorService.getStats(user.id);
+  }
 }
