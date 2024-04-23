@@ -13,6 +13,7 @@ import sequelize from 'sequelize';
 import { AuthorQuestion } from './entities/authorQuestion.entity';
 import { NotifyReceiver } from './entities/notifyReceiver.entity';
 import { CreateReceiverDto, ReceiverFilter } from './dto/create-receiver.dto';
+import { CreateQuestionDto } from './dto/create-question.dto';
 
 @Injectable()
 export class AuthorService {
@@ -35,20 +36,27 @@ export class AuthorService {
    */
   async create(createAuthorDto: CreateAuthorDto, uid: number) {
     // 这里的逻辑改下，直接爬虫爬取
-    const { author_id, is_org, author_type } = createAuthorDto
-    const { maxWeight } = await this.getMaxWeight(uid)
-    const user = await this.toolService.getZhihuUserInfo(author_id, is_org)
-    const data = await this.authorModel.create({
-      author_id,
-      is_org,
-      author_name: user.name,
-      author_avatar: user.avatarUrl,
-      author_type: author_type,
-      status: false,
-      uid,
-      weight: maxWeight ? maxWeight + 1 : 1
-    })
-    return data
+    try {
+      const { author_id, is_org, author_type } = createAuthorDto
+      const { maxWeight } = await this.getMaxWeight(uid)
+      const user = await this.toolService.getZhihuUserInfo(author_id, is_org)
+      const data = await this.authorModel.create({
+        author_id,
+        is_org,
+        author_name: user.name,
+        author_avatar: user.avatarUrl,
+        author_type: author_type,
+        status: false,
+        uid,
+        weight: maxWeight ? maxWeight + 1 : 1
+      })
+      return data
+    } catch (error) {
+      return {
+        statusCode: 500,
+        data: error
+      }
+    }
   }
 
 
@@ -188,6 +196,52 @@ export class AuthorService {
       uid
     })
   }
+
+  /**
+   * 手动创建作者问题
+   * @param param 
+   * @param aid 
+   * @param uid 
+   * @returns 
+   */
+  async createQuestionByHand (param: CreateQuestionDto, uid: number) {
+    const { question_id, author_id, type } = param
+    try {
+      const question = await this.toolService.getZhihuQuestionInfo(question_id)
+      return this.createQuestion({
+        question_id: question.id,
+        question_title: question.title,
+        question_desc: question.detail,
+        type: type,
+        question_created: question.created,
+        question_updated: question.updated,
+        question_type: question.questionType
+      }, author_id, uid)
+    } catch (error) {
+      return {
+        statusCode: 500,
+        data: error
+      }
+    }
+  }
+
+  /**
+   * 删除作者问题
+   * @param param 
+   * @param aid 
+   * @param uid 
+   * @returns 
+   */
+  removeQuestion (id: number, aid: number, uid: number) {
+    return this.authorQuestionModel.destroy({
+      where: {
+        id,
+        aid,
+        uid
+      }
+    })
+  }
+
 
   /**
    * 查询作者问题详情

@@ -8,6 +8,7 @@ import { RoleGuard } from 'src/common/role.guard';
 import { User } from 'src/common/user.decorator';
 import { User as UserType } from 'src/user/entities/user.entity'
 import { CreateReceiverDto, ReceiverFilter } from './dto/create-receiver.dto';
+import { CreateQuestionDto } from './dto/create-question.dto';
 
 @Controller({ path: 'author', version: '1' })
 @ApiTags('知乎作者管理')
@@ -115,6 +116,39 @@ export class AuthorController {
   @ApiResponse({ status: 200, description: '查询成功' })
   questions(@Body() param: AuthorQuestionFilter, @User() user: UserType) {
     return this.authorService.findAllQuestion(param, user.id);
+  }
+
+  @Post('question/create')
+  @HttpCode(200)
+  @ApiOperation({ summary: '新增问题', description: '新增问题' })
+  @ApiResponse({ status: 200, description: '新增成功' })
+  createQuestion(@Body() param: CreateQuestionDto, @User() user: UserType) {
+    return this.authorService.createQuestionByHand(param, user.id);
+  }
+
+  @Post('question/delete')
+  @HttpCode(200)
+  @ApiOperation({ summary: '新增问题', description: '新增问题' })
+  @ApiResponse({ status: 200, description: '新增成功' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'number',
+          default: 1,
+          description: '问题id'
+        },
+        author_id: {
+          type: 'number',
+          default: 1,
+          description: '作者id'
+        }
+      }
+    }
+  })
+  deleteQuestion(@Body('id') id: number, @Body('author_id') author_id: number, @User() user: UserType) {
+    return this.authorService.removeQuestion(id, author_id, user.id);
   }
 
   @Post('receiver/list')
