@@ -3,19 +3,22 @@ import { CreateQuestionDto, QuestionFilter } from './dto/create-question.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { InjectModel } from '@nestjs/sequelize';
 import { Question } from './entities/question.entity';
-import axios from 'axios';
-import * as cheerio from 'cheerio'
 import { Op } from 'sequelize';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { CronJob } from 'cron';
 import { ToolService } from 'src/tool/tool.service';
-import { notify_emails, schedule_question_cron } from 'global.config';
+import { schedule_question_cron } from 'global.config';
+import sequelize from 'sequelize';
+import { NotifyHistory } from 'src/author/entities/notifyHistory';
+import { NotifyReceiver } from 'src/author/entities/notifyReceiver.entity';
 
 @Injectable()
 export class QuestionService {
   private readonly logger = new Logger(QuestionService.name)
   constructor (
     @InjectModel(Question) private questionModel: typeof Question,
+    @InjectModel(NotifyHistory) private notifyHistoryModel: typeof NotifyHistory,
+    @InjectModel(NotifyReceiver) private notifyReceiverModel: typeof NotifyReceiver,
     private scheduleRegistry: SchedulerRegistry,
     private readonly toolService: ToolService,
   ) {}
@@ -29,35 +32,44 @@ export class QuestionService {
   async create(createQuestionDto: CreateQuestionDto, uid: number) {
     try {
       // 自动获取问题内容
-      const res = await axios({
-        url: `https://www.zhihu.com/question/${createQuestionDto.quesion_id}`,
-        method: 'get'
-      })
-      const $ = cheerio.load(res.data)
-      const initialDataEl = $('script#js-initialData')
-      const initialDataJson = initialDataEl.text()
-      const initialData = JSON.parse(initialDataJson)
-      const { title, excerpt, author, created, updatedTime } = initialData.initialState.entities.questions[createQuestionDto.quesion_id]
-      const question = await this.questionModel.create({
-        quesion_id: createQuestionDto.quesion_id,
-        question_title: title,
-        question_desc: excerpt || '',
-        question_author_id: author.urlToken || author.id,
-        question_author_name: author.name || '',
-        question_author_avatar: author.avatarUrl || author.avatarUrlTemplate,
-        question_created: created,
-        question_updated: updatedTime,
+      const { maxWeight } = await this.getMaxWeight(uid)
+      const question = await this.toolService.getZhihuQuestionInfo(createQuestionDto.quesion_id)
+      return this.questionModel.create({
+        quesion_id: question.id,
+        question_title: question.title,
+        question_desc: question.detail || '',
+        question_author_id: question.author.id,
+        question_author_name: question.author.name,
+        question_author_avatar: question.author.avatar || question.author.avatarUrlTemplate,
+        question_created: question.created,
+        question_updated: question.updated,
         status: false,
-        uid: uid
+        uid: uid,
+        weight: maxWeight ? maxWeight + 1 : 1
       })
-      // 创建完任务后立马启用通知
-      return question
     } catch (error) {
       return {
         statusCode: 500,
         data: error
       }
     }
+  }
+
+  /**
+   * 获取最大排序值
+   * @param uid 
+   * @returns 
+   */
+  getMaxWeight (uid: number): Promise<any> {
+    return this.questionModel.findOne({
+      attributes: [
+        [sequelize.fn('MAX', sequelize.col('weight')), 'maxWeight'],
+      ],
+      where: {
+        uid: uid
+      },
+      raw: true
+    })
   }
 
   /**
@@ -68,19 +80,24 @@ export class QuestionService {
    */
   async findAll(param: QuestionFilter, uid: number) {
     const { page, size, search, status } = param
-    console.log(search)
     const data: any = {}
     const tmp: any = {
       order: [
-        ['createdAt', 'desc']
+        ['weight', 'desc']
       ],
       where: {
         uid: uid,
         [Op.or]: {
+          quesion_id: {
+            [Op.like]: search ? `%${search}%` : '%%'
+          },
           question_title: {
             [Op.like]: search ? `%${search}%` : '%%'
           },
           question_desc: {
+            [Op.like]: search ? `%${search}%` : '%%'
+          },
+          question_author_id: {
             [Op.like]: search ? `%${search}%` : '%%'
           },
           question_author_name: {
@@ -163,7 +180,7 @@ export class QuestionService {
    * 开始通知：创建定时任务
    * @param time 
    * @param obj 
-   * @param uid 
+   * @param uid
    */
   startNotify (time: string, obj: { id: number; question_id: string }, uid: number) {
     const { id, question_id  } = obj
@@ -175,14 +192,19 @@ export class QuestionService {
         }
       })
       try {
-        const res = await axios({
-          url: `https://www.zhihu.com/api/v4/brand/questions/${question_id}/activity/red-packet`
-        })
-        const { content, title, count_down_value } = res.data
+        const { content, title, count_down_value } = await this.toolService.getZhihuQuestionRedPacket(question_id)
         if (count_down_value) {
+          const notify_emails = await this.notifyReceiverModel.findAll({ where: { uid, status: true } })
           // 第一步：邮箱通知
-          await Promise.all(notify_emails.map((email) => {
-            return this.toolService.sendZhihuMail(`【${last_question.question_title}】问题变红包了，<a href="https://www.zhihu.com/question/${question_id}" target="_blank">赶快去回答吧</a>！${content}`, email)
+          await Promise.all(notify_emails.map(async (email) => {
+            const notify_content = `【${last_question.question_title}】问题变红包了，<a href="https://www.zhihu.com/question/${question_id}" target="_blank">赶快去回答吧</a>！`
+            await this.notifyHistoryModel.create({
+              obj_id: question_id,
+              notify_type: 'question',
+              notify_content: notify_content,
+              uid
+            })
+            return this.toolService.sendZhihuMail(`${notify_content}${content}`, email.email)
           }))
           // 第二步：更新状态
           let money = 0
@@ -193,6 +215,7 @@ export class QuestionService {
               question_red_money: money,
               question_red_count: count_down_value,
               notify_status: true,
+              notify_time: new Date().toUTCString(),
               status: false
             }, id, uid)
             // 第三步：关闭并删除定时任务

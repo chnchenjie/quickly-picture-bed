@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="https://unpkg.com/axios@1.4.0/dist/axios.min.js"></script>
+</head>
+<body>
+  <script>
+    // axios({
+    //   method: 'get',
+    //   url: 'https://unpkg.com/axios/package.json'
+    // }).then(res => {
+    //   console.log(res.data)
+    // })
+
+    axios({
+      method: 'get',
+      url: 'https://registry.npmjs.org/@itchenliang/picture-rollup-oss-plugin'
+    }).then(res => {
+      console.log(res.data)
+    })
+
+    // axios({
+    //   method: 'get',
+    //   url: 'https://unpkg.com/axios/package.json'
+    // }).then(res => {
+    //   console.log(res.data)
+    // })
+  </script>
+</body>
+</html>

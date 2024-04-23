@@ -1,8 +1,8 @@
 import { BelongsTo, Column, ForeignKey, Table, Model, HasMany, DataType } from "sequelize-typescript";
 import { User } from "src/user/entities/user.entity";
 
-@Table({ tableName: 'notify_history' })
-export class NotifyHistory extends Model<NotifyHistory> {
+@Table({ tableName: 'notify_receiver' })
+export class NotifyReceiver extends Model<NotifyReceiver> {
   @Column({
     primaryKey: true,
     autoIncrement: true
@@ -11,21 +11,22 @@ export class NotifyHistory extends Model<NotifyHistory> {
 
   @Column({
     allowNull: false,
-    comment: '通知的对象id'
+    comment: '邮箱地址'
   })
-  obj_id: string
+  email: string
 
   @Column({
     allowNull: false,
-    comment: '通知类型(question-问题通知 author-博主通知)'
+    comment: '备注'
   })
-  notify_type: string
-  
+  remark: string
+
   @Column({
     allowNull: false,
-    comment: '通知内容'
+    comment: '账号状态',
+    defaultValue: true
   })
-  notify_content: string
+  status: boolean
 
   @ForeignKey(() => User)
   @Column({

@@ -1,6 +1,6 @@
-export const email_config = {
+﻿export const email_config = {
   user: '1825956830@qq.com',
-  pass: 'hgnpyqcvxlwufdbg',
+  pass: 'kyvlctoilqeobbbh',
   host: 'smtp.qq.com',
   port: '587',
   secure: false
@@ -9,9 +9,6 @@ export const email_config = {
 // 问题的定时任务的cron表达式
 export const schedule_question_cron = '00 * * * * *'
 // 发布者的定时任务的cron表达式
-export const schedule_publisher_cron = '05 * * * * *'
+export const schedule_publisher_cron = '30 * * * * *'
 // 答主的定时任务的cron表达式
-export const schedule_answer_cron = '10 * * * * *'
-
-// 通知邮箱
-export const notify_emails = ['itchenliang@163.com', 'ischenliang@163.com']
+export const schedule_answer_cron = '55 * * * * *'

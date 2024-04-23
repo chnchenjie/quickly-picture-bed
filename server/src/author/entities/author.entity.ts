@@ -42,25 +42,18 @@ export class Author extends Model<Author> {
   is_org: boolean
 
   @Column({
-    allowNull: true,
-    comment: '最近一个问题id'
-  })
-  last_question_id: string
-
-  @Column({
     allowNull: false,
-    comment: '通知状态',
-    defaultValue: false
-  })
-  notify_status: boolean
-
-  @Column({
-    allowNull: false,
-    comment: '状态',
+    comment: '任务状态',
     defaultValue: true
   })
   status: boolean
 
+  @Column({
+    allowNull: false,
+    comment: '排序值，值越大越靠前',
+    defaultValue: 1
+  })
+  weight: number
 
   @ForeignKey(() => User)
   @Column({

@@ -80,10 +80,24 @@ export class Question extends Model<Question> {
 
   @Column({
     allowNull: true,
+    comment: '最近通知时间',
+    defaultValue: ''
+  })
+  notify_time: string
+
+  @Column({
+    allowNull: true,
     comment: '状态',
     defaultValue: true
   })
   status: boolean
+
+  @Column({
+    allowNull: false,
+    comment: '排序值，值越大越靠前',
+    defaultValue: 1
+  })
+  weight: number
 
   @ForeignKey(() => User)
   @Column({

@@ -11,6 +11,9 @@ export class UpdateQuestionDto {
   @ApiProperty({ description: '通知状态' })
   notify_status?: boolean
 
+  @ApiProperty({ description: '通知状态' })
+  notify_time?: string
+  
   @ApiProperty({ description: '状态' })
   status?: boolean
 }

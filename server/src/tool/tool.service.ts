@@ -11,6 +11,8 @@ import { SmsCode } from 'src/common/entities/smsCode.entity';
 import { map } from 'rxjs'
 import { HttpService } from '@nestjs/axios';
 import * as iconv from 'iconv-lite'
+import axios from 'axios';
+import * as cheerio from 'cheerio'
 
 
 @Injectable()
@@ -253,5 +255,91 @@ export class ToolService {
   sendZhihuMail (text: string, to: string, subject: string = 'LightFastPicture') {
     console.log('发送邮件')
     return this.verifyCodeService.sendZhihuMail(text, to, subject)
+  }
+
+  /**
+   * 获取知乎个人信息
+   * @param author_id 账号id
+   * @param is_org 是否机构
+   * @returns 
+   */
+  async getZhihuUserInfo (author_id: string, is_org: boolean) {
+    const res = await axios({
+      url: `https://www.zhihu.com/${is_org ? 'org' : 'people'}/${author_id}`
+    })
+    const $ = cheerio.load(res.data)
+    const initialDataEl = $('script#js-initialData')
+    const initialDataJson = initialDataEl.text()
+    const initialData = JSON.parse(initialDataJson)
+    const user = initialData.initialState.entities.users[author_id]
+    return user
+  }
+
+  /**
+   * 获取知乎用户的最新几个问题
+   * @param author_id 
+   * @param is_org 
+   * @returns 
+   */
+  async getZhihuUserQuestionsAndAnswers(author_id: string, is_org: boolean) {
+    const res = await axios({
+      url: `https://www.zhihu.com/${is_org ? 'org' : 'people'}/${author_id}`
+    })
+    const $ = cheerio.load(res.data)
+    const initialDataEl = $('script#js-initialData')
+    const initialDataJson = initialDataEl.text()
+    const initialData = JSON.parse(initialDataJson)
+    const questions = initialData.initialState.entities.questions
+    const answers = initialData.initialState.entities.answers
+    return {
+      questions,
+      answers
+    }
+  }
+
+  /**
+   * 获取问题详情
+   * @param question_id 问题id
+   * @returns 
+   */
+  async getZhihuQuestionInfo(question_id: string) {
+    const res = await axios({
+      url: `https://www.zhihu.com/question/${question_id}`
+    })
+    const $ = cheerio.load(res.data)
+    // 获取问题详情
+    const initialDataEl = $('script#js-initialData')
+    const initialDataJson = initialDataEl.text()
+    const initialData = JSON.parse(initialDataJson)
+    const question = initialData.initialState.entities.questions[question_id]
+    // 获取问题创建和更新时间
+    const created = $('meta[itemProp="dateCreated"]').get(0).attribs.content
+    const updated = $('meta[itemProp="dateModified"]').get(0).attribs.content
+    return {
+      id: question.id,
+      title: question.title,
+      questionType: question.questionType,
+      detail: question.detail,
+      updated,
+      created,
+      author: {
+        id: question.author.urlToken,
+        avatar: question.author.avatarUrl,
+        avatarUrlTemplate: question.author.avatarUrlTemplate || '',
+        name: question.author.name
+      }
+    }
+  }
+
+  /**
+   * 获取问题是否变红包问题
+   * @param question_id 
+   * @returns 
+   */
+  async getZhihuQuestionRedPacket (question_id: string) {
+    const res = await axios({
+      url: `https://www.zhihu.com/api/v4/brand/questions/${question_id}/activity/red-packet`
+    })
+    return res.data
   }
 }
