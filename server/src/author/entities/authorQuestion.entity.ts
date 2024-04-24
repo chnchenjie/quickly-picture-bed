@@ -1,6 +1,7 @@
 import { BelongsTo, Column, ForeignKey, Table, Model } from "sequelize-typescript";
 import { User } from "src/user/entities/user.entity";
 import { Author } from "./author.entity";
+import { DataTypes } from "sequelize";
 
 @Table({ tableName: 'author_question' })
 export class AuthorQuestion extends Model<AuthorQuestion> {
@@ -24,7 +25,8 @@ export class AuthorQuestion extends Model<AuthorQuestion> {
 
   @Column({
     allowNull: false,
-    comment: '问题描述'
+    comment: '问题描述',
+    type: DataTypes.TEXT
   })
   question_desc: string
 

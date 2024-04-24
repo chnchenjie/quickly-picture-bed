@@ -11,6 +11,7 @@ import { schedule_question_cron } from 'global.config';
 import sequelize from 'sequelize';
 import { NotifyHistory } from 'src/author/entities/notifyHistory';
 import { NotifyReceiver } from 'src/author/entities/notifyReceiver.entity';
+import { Sequelize } from 'sequelize-typescript';
 
 @Injectable()
 export class QuestionService {
@@ -21,6 +22,7 @@ export class QuestionService {
     @InjectModel(NotifyReceiver) private notifyReceiverModel: typeof NotifyReceiver,
     private scheduleRegistry: SchedulerRegistry,
     private readonly toolService: ToolService,
+    private sequelize: Sequelize
   ) {}
 
   /**
@@ -64,6 +66,23 @@ export class QuestionService {
     return this.questionModel.findOne({
       attributes: [
         [sequelize.fn('MAX', sequelize.col('weight')), 'maxWeight'],
+      ],
+      where: {
+        uid: uid
+      },
+      raw: true
+    })
+  }
+
+  /**
+   * 获取最小排序值
+   * @param uid 
+   * @returns 
+   */
+  getMinWeight (uid: number): Promise<any> {
+    return this.questionModel.findOne({
+      attributes: [
+        [sequelize.fn('MIN', sequelize.col('weight')), 'minWeight'],
       ],
       where: {
         uid: uid
@@ -284,5 +303,70 @@ export class QuestionService {
         uid
       }
     })
+  }
+
+  /**
+   * 排序：上移或下移
+   * @param id 
+   * @param direction 
+   * @param uid 
+   * @returns 
+   */
+  async sort (id: number, direction: 'up' | 'down', uid) {
+    const item = await this.findOne(id, uid)
+    try {
+      if (!item) {
+        return { statusCode: 500, data: '数据不存在' }
+      }
+      switch (direction) {
+        case 'up':
+          const prevItem = await this.questionModel.findOne({
+            where: {
+              weight: {
+                [Op.gt]: item.weight
+              },
+              uid
+            },
+            order: [
+              ['weight', 'asc']
+            ]
+          })
+          // 已经是第一个元素(weight值最大)，无法上移
+          if (!prevItem) {
+            return
+          }
+          await this.sequelize.transaction(async (t) => {
+            await this.questionModel.update({ weight: prevItem.weight }, { where: { id: item.id, uid }, transaction: t })
+            await this.questionModel.update({ weight: item.weight }, { where: { id: prevItem.id, uid }, transaction: t })
+          })
+          return item
+        case 'down':
+          const nextItem = await this.questionModel.findOne({
+            where: {
+              weight: {
+                [Op.lt]: item.weight
+              },
+              uid
+            },
+            order: [
+              ['weight', 'desc']
+            ]
+          })
+          // 已经是第最后一个元素(weight值最小)，无法下移
+          if (!nextItem) {
+            return
+          }
+          await this.sequelize.transaction(async (t) => {
+            await this.questionModel.update({ weight: nextItem.weight }, { where: { id: item.id, uid }, transaction: t })
+            await this.questionModel.update({ weight: item.weight }, { where: { id: nextItem.id, uid }, transaction: t })
+          })
+          return item
+      }
+    } catch (error) {
+      return {
+        statusCode: 500,
+        data: error
+      }
+    }
   }
 }

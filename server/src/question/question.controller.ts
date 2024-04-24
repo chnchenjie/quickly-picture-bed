@@ -90,4 +90,29 @@ export class QuestionController {
   toggleSchedule(@Body('id') id: number, @User() user: UserType) {
     return this.questionService.toggleSchedule(id, user.id)
   }
+
+  @Post('sort')
+  @HttpCode(200)
+  @ApiOperation({ summary: '调整排序', description: '调整排序' })
+  @ApiResponse({ status: 200, description: '排序成功' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'number',
+          default: 1,
+          description: '问题id'
+        },
+        direction: {
+          type: 'string',
+          default: 'up',
+          description: '移动方向 up-上移 down-下移'
+        }
+      }
+    }
+  })
+  sort(@Body('id') id: number, @Body('direction') direction: 'up' | 'down', @User() user: UserType) {
+    return this.questionService.sort(id, direction, user.id);
+  }
 }

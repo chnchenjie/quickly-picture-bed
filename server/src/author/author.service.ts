@@ -14,6 +14,7 @@ import { AuthorQuestion } from './entities/authorQuestion.entity';
 import { NotifyReceiver } from './entities/notifyReceiver.entity';
 import { CreateReceiverDto, ReceiverFilter } from './dto/create-receiver.dto';
 import { CreateQuestionDto } from './dto/create-question.dto';
+import { Sequelize } from 'sequelize-typescript';
 
 @Injectable()
 export class AuthorService {
@@ -26,6 +27,7 @@ export class AuthorService {
     @InjectModel(AuthorQuestion) private authorQuestionModel: typeof AuthorQuestion,
     private scheduleRegistry: SchedulerRegistry,
     private readonly toolService: ToolService,
+    private sequelize: Sequelize
   ) {}
 
   /**
@@ -232,11 +234,10 @@ export class AuthorService {
    * @param uid 
    * @returns 
    */
-  removeQuestion (id: number, aid: number, uid: number) {
+  removeQuestion (id: number, uid: number) {
     return this.authorQuestionModel.destroy({
       where: {
         id,
-        aid,
         uid
       }
     })
@@ -259,6 +260,56 @@ export class AuthorService {
         type
       }
     })
+  }
+
+  /**
+   * 更新作者问题详情
+   * @param question_id 
+   * @param aid 
+   * @param uid 
+   * @returns 
+   */
+  async updateQuestion (id: number, uid: number) {
+    const detail = await this.authorQuestionModel.findOne({ where: { id, uid } })
+    if (!detail) {
+      return { statusCode: 500, data: '记录不存在' }
+    }
+    const question = await this.toolService.getZhihuQuestionInfo(detail.question_id)
+    return this.authorQuestionModel.update({
+      question_created: question.created,
+      question_updated: question.updated
+    }, {
+      where: {
+        id,
+        uid
+      }
+    })
+  }
+
+  /**
+   * 标记作者问题详情：主要是为了便于查看是否为红包问题
+   * @param question_id 
+   * @param aid 
+   * @param uid 
+   * @returns 
+   */
+  async markQuestion (id: number, uid: number) {
+    const detail = await this.authorQuestionModel.findOne({ where: { id, uid } })
+    if (!detail) {
+      return { statusCode: 500, data: '记录不存在' }
+    }
+    const { content, title, count_down_value } = await this.toolService.getZhihuQuestionRedPacket(detail.question_id)
+    if (count_down_value) {
+      return this.authorQuestionModel.update({
+        question_type: 'redpacket'
+      }, {
+        where: {
+          id,
+          uid
+        }
+      })
+    }
+    return {}
   }
 
   /**
@@ -410,7 +461,9 @@ export class AuthorService {
         // 第二步：获取该作者的动态
         const { questions: questionObj } = await this.toolService.getZhihuUserQuestionsAndAnswers(lastAuthor.author_id, lastAuthor.is_org)
         // 第三步：获取问题详情(题主发布的问题) ==> 为了获取第二步无法获取创建时间和修改时间以及筛选出只是自己的问题
-        const questions_info = (await Promise.all(Object.keys(questionObj).map(id => this.toolService.getZhihuQuestionInfo(id)))).filter(question => question.author.id === lastAuthor.author_id)
+        // 这里会导致发送多个请求：容易被判定为人机
+        // const questions_info = (await Promise.all(Object.keys(questionObj).map(id => this.toolService.getZhihuQuestionInfo(id)))).filter(question => question.author.id === lastAuthor.author_id)
+        const questions_info = Object.keys(questionObj).map(id => questionObj[id]).filter(question => question.author.urlToken === lastAuthor.author_id)
         // 第四步：判断这些问题是否存在于作者问题列表中
         //    存在：则跳过
         //    不存在：如果是疑似红包问题则邮件通知，否则直接新增即可
@@ -426,8 +479,8 @@ export class AuthorService {
               question_desc: question.detail,
               question_type: question.questionType,
               type: 'publish',
-              question_created: question.created,
-              question_updated: question.updated
+              question_created: question.created || '',
+              question_updated: question.updated || ''
             }, lastAuthor.id, uid)
             // 判断是否为疑似红包：是 - 邮箱通知
             if (question.questionType === 'commercial') {
@@ -470,7 +523,8 @@ export class AuthorService {
         // 第二步：获取该作者的动态中的问题
         const { questions: questionObj, answers: answersObj } = await this.toolService.getZhihuUserQuestionsAndAnswers(lastAuthor.author_id, lastAuthor.is_org)
         // 第三步：获取问题详情(答主关注的问题) ==> 为了获取第二步无法获取创建时间和修改时间以及筛选出非自己的问题(即关注的问题)
-        const questions_info = (await Promise.all(Object.keys(questionObj).map(id => this.toolService.getZhihuQuestionInfo(id)))).filter(question => question.author.id !== lastAuthor.author_id)
+        // const questions_info = (await Promise.all(Object.keys(questionObj).map(id => this.toolService.getZhihuQuestionInfo(id)))).filter(question => question.author.id !== lastAuthor.author_id)
+        const questions_info = Object.keys(questionObj).map(id => questionObj[id]).filter(question => question.author.urlToken !== lastAuthor.author_id)
         const notify_emails = await this.notifyReceiverModel.findAll({ where: { uid, status: true } })
         // 第四步：判断这些问题是否存在于作者问题关注列表中
         for (let i = 0; i < questions_info.length; i++) {
@@ -484,8 +538,8 @@ export class AuthorService {
               question_desc: question.detail,
               question_type: question.questionType,
               type: 'follow',
-              question_created: question.created,
-              question_updated: question.updated
+              question_created: question.created || '',
+              question_updated: question.updated || ''
             }, lastAuthor.id, uid)
             // 判断是否为疑似红包：是 - 邮箱通知
             if (question.questionType === 'commercial') {
@@ -506,7 +560,8 @@ export class AuthorService {
         // 第五步：获取问题详情(答主回答的问题) ==> 为了获取第二步无法获取创建时间和修改时间以及筛选出自己回答的问题
         // 查询只属该作者的回答
         const author_answer = Object.keys(answersObj).filter(id => answersObj[id].author.urlToken === lastAuthor.author_id)
-        const answers_info = (await Promise.all(author_answer.map(id => this.toolService.getZhihuQuestionInfo(answersObj[id].question.id))))
+        // const answers_info = (await Promise.all(author_answer.map(id => this.toolService.getZhihuQuestionInfo(answersObj[id].question.id))))
+        const answers_info = author_answer.map(id => answersObj[id].question)
         // 第六步：判断这些问题是否存在于作者问题列表中
         for (let i = 0; i < answers_info.length; i++) {
           const question = answers_info[i]
@@ -519,8 +574,8 @@ export class AuthorService {
               question_desc: question.detail,
               question_type: question.questionType,
               type: 'answer',
-              question_created: question.created,
-              question_updated: question.updated
+              question_created: question.created || '',
+              question_updated: question.updated || ''
             }, lastAuthor.id, uid)
             // 判断是否为疑似红包：是 - 邮箱通知
             if (question.questionType === 'commercial') {
@@ -604,7 +659,79 @@ export class AuthorService {
       }
     })
   }
+  
+  /**
+   * 排序：上移或下移
+   * @param id 
+   * @param direction 
+   * @param uid 
+   * @returns 
+   */
+  async sort (id: number, direction: 'up' | 'down', author_type: 'publisher' | 'answer', uid) {
+    const item = await this.findOne(id, uid)
+    try {
+      if (!item) {
+        return { statusCode: 500, data: '数据不存在' }
+      }
+      switch (direction) {
+        case 'up':
+          const prevItem = await this.authorModel.findOne({
+            where: {
+              weight: {
+                [Op.gt]: item.weight
+              },
+              uid,
+              author_type
+            },
+            order: [
+              ['weight', 'asc']
+            ]
+          })
+          // 已经是第一个元素(weight值最大)，无法上移
+          if (!prevItem) {
+            return
+          }
+          await this.sequelize.transaction(async (t) => {
+            await this.authorModel.update({ weight: prevItem.weight }, { where: { id: item.id, uid }, transaction: t })
+            await this.authorModel.update({ weight: item.weight }, { where: { id: prevItem.id, uid }, transaction: t })
+          })
+          return item
+        case 'down':
+          const nextItem = await this.authorModel.findOne({
+            where: {
+              weight: {
+                [Op.lt]: item.weight
+              },
+              uid,
+              author_type
+            },
+            order: [
+              ['weight', 'desc']
+            ]
+          })
+          // 已经是第最后一个元素(weight值最小)，无法下移
+          if (!nextItem) {
+            return
+          }
+          await this.sequelize.transaction(async (t) => {
+            await this.authorModel.update({ weight: nextItem.weight }, { where: { id: item.id, uid }, transaction: t })
+            await this.authorModel.update({ weight: item.weight }, { where: { id: nextItem.id, uid }, transaction: t })
+          })
+          return item
+      }
+    } catch (error) {
+      return {
+        statusCode: 500,
+        data: error
+      }
+    }
+  }
 
+  /**
+   * 数据统计
+   * @param uid 
+   * @returns 
+   */
   async getStats (uid: number) {
     const question = {
       total: await this.questionModel.count({
@@ -649,10 +776,24 @@ export class AuthorService {
         }
       })
     }
+    const receiver = {
+      total: await this.notifyReceiverModel.count({
+        where: {
+          uid
+        }
+      }),
+      schedule: await this.notifyReceiverModel.count({
+        where: {
+          uid,
+          status: true
+        }
+      })
+    }
     return {
       question,
       answer,
-      publisher
+      publisher,
+      receiver
     }
   }
 }

@@ -1,3 +1,4 @@
+import { DataTypes } from "sequelize";
 import { BelongsTo, Column, ForeignKey, Table, Model, HasMany, DataType } from "sequelize-typescript";
 import { User } from "src/user/entities/user.entity";
 
@@ -23,7 +24,8 @@ export class Question extends Model<Question> {
 
   @Column({
     allowNull: true,
-    comment: '问题描述'
+    comment: '问题描述',
+    type: DataTypes.TEXT
   })
   question_desc: string
 

@@ -102,6 +102,36 @@ export class AuthorController {
     return this.authorService.toggleSchedule(id, user.id)
   }
 
+  @Post('sort')
+  @HttpCode(200)
+  @ApiOperation({ summary: '调整排序', description: '调整排序' })
+  @ApiResponse({ status: 200, description: '排序成功' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'number',
+          default: 1,
+          description: '问题id'
+        },
+        direction: {
+          type: 'string',
+          default: 'up',
+          description: '移动方向 up-上移 down-下移'
+        },
+        author_type: {
+          type: 'string',
+          default: 'publisher',
+          description: '作者类型 publisher-题主 answer-答主'
+        }
+      }
+    }
+  })
+  sort(@Body('id') id: number, @Body('direction') direction: 'up' | 'down', @Body('author_type') author_type: 'publisher' | 'answer', @User() user: UserType) {
+    return this.authorService.sort(id, direction, author_type, user.id);
+  }
+
   @Post('stats')
   @HttpCode(200)
   @ApiOperation({ summary: '统计数据', description: '统计数据' })
@@ -138,17 +168,52 @@ export class AuthorController {
           type: 'number',
           default: 1,
           description: '问题id'
-        },
-        author_id: {
-          type: 'number',
-          default: 1,
-          description: '作者id'
         }
       }
     }
   })
-  deleteQuestion(@Body('id') id: number, @Body('author_id') author_id: number, @User() user: UserType) {
-    return this.authorService.removeQuestion(id, author_id, user.id);
+  deleteQuestion(@Body('id') id: number, @User() user: UserType) {
+    return this.authorService.removeQuestion(id, user.id);
+  }
+
+  @Post('question/update')
+  @HttpCode(200)
+  @ApiOperation({ summary: '更新问题', description: '更新问题' })
+  @ApiResponse({ status: 200, description: '成功' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'number',
+          default: 1,
+          description: '问题id'
+        }
+      }
+    }
+  })
+  updateQuestion(@Body('id') id: number, @User() user: UserType) {
+    return this.authorService.updateQuestion(id, user.id);
+  }
+
+  @Post('question/mark')
+  @HttpCode(200)
+  @ApiOperation({ summary: '标记问题', description: '标记问题' })
+  @ApiResponse({ status: 200, description: '标记成功' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'number',
+          default: 1,
+          description: '问题id'
+        }
+      }
+    }
+  })
+  markQuestion(@Body('id') id: number, @User() user: UserType) {
+    return this.authorService.markQuestion(id, user.id);
   }
 
   @Post('receiver/list')
