@@ -5,6 +5,7 @@ import { VerifyCode } from "./entities/verifyCode.entity";
 import { InjectModel } from "@nestjs/sequelize";
 import { SmsCode } from "./entities/smsCode.entity";
 import { email_config } from '../../global.config'
+import { Setting } from "src/setting/entities/setting.entity";
 
 interface SvgCaptchaConfig {
   size: number // 随机验证码长度
@@ -19,7 +20,10 @@ interface SvgCaptchaConfig {
 
 @Injectable()
 export class VerifyCodeService {
-  constructor (@InjectModel(VerifyCode) private verifyCodeModel: typeof VerifyCode, @InjectModel(SmsCode) private smsCodeModel: typeof SmsCode) {}
+  constructor (
+    @InjectModel(VerifyCode) private verifyCodeModel: typeof VerifyCode,
+    @InjectModel(SmsCode) private smsCodeModel: typeof SmsCode,
+    @InjectModel(Setting) private settingModel: typeof Setting) {}
   /**
    * 发送邮件
    * @param text 验证码
@@ -27,21 +31,22 @@ export class VerifyCodeService {
    * @param subject 标题
    * @returns 
    */
-  sendMail (text: string, to: string, subject: string = 'LightFastPicture') {
-    const { user, pass, host, port, secure } = email_config
+  async sendMail (text: string, to: string, subject: string = 'LightFastPicture') {
+    const { host, port, secure } = email_config
+    const { system: { mail_pass, mail_user } } = await this.settingModel.findOne()
     let transporter = nodemailer.createTransport({
       host,
       port,
       secure,
       auth: {
-        user, // 用户账号
-        pass, //授权码,通过QQ获取
+        user: mail_user, // 用户账号
+        pass: mail_pass, //授权码,通过QQ获取
       },
     })
     return new Promise((resolve, reject) => {
-      if (pass && user) {
+      if (mail_user && mail_pass) {
         transporter.sendMail({
-          from: `<${user}>`,
+          from: `<${mail_user}>`,
           to: `<${to}>`,
           subject: subject,
           html: `【LightFastPicture】验证码：<span style="color: #409eff;text-decoration: underline;">${text}</span>，有效期3分钟，如非本人操作，请忽略此消息。`,
@@ -63,21 +68,22 @@ export class VerifyCodeService {
    * @param subject 
    * @returns 
    */
-  sendZhihuMail (text: string, to: string, subject: string = 'LightFastPicture') {
-    const { user, pass, host, port, secure } = email_config
+  async sendZhihuMail (text: string, to: string, subject: string = 'LightFastPicture') {
+    const { host, port, secure } = email_config
+    const { system: { mail_pass, mail_user } } = await this.settingModel.findOne()
     let transporter = nodemailer.createTransport({
       host,
       port,
       secure,
       auth: {
-        user, // 用户账号
-        pass, //授权码,通过QQ获取
+        user: mail_user, // 用户账号
+        pass: mail_pass, //授权码,通过QQ获取
       },
     })
     return new Promise((resolve, reject) => {
-      if (pass && user) {
+      if (mail_user && mail_pass) {
         transporter.sendMail({
-          from: `<${user}>`,
+          from: `<${mail_user}>`,
           to: `<${to}>`,
           subject: subject,
           html: `${text}`,

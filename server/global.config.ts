@@ -1,6 +1,4 @@
 ﻿export const email_config = {
-  user: '1825956830@qq.com',
-  pass: 'kyvlctoilqeobbbh',
   host: 'smtp.qq.com',
   port: '587',
   secure: false

@@ -8,11 +8,12 @@ import { TimeService } from "./time.service";
 import { GiteeService } from "./gitee.service";
 import { HttpModule } from "@nestjs/axios";
 import { PluginLoaderService } from "./pluginLoader.service";
+import { Setting } from "src/setting/entities/setting.entity";
 
 @Global()
 @Module({
   imports: [
-    SequelizeModule.forFeature([VerifyCode, SmsCode]),
+    SequelizeModule.forFeature([VerifyCode, SmsCode, Setting]),
     HttpModule
   ],
   providers: [Md5Service, VerifyCodeService, TimeService, GiteeService, PluginLoaderService],
