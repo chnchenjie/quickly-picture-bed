@@ -290,7 +290,7 @@ export class QuestionService {
       this.stopNotify(quesion.quesion_id + '-' + quesion.id)
       this.deleteNotify(quesion.quesion_id + '-' + quesion.id)
     } else {
-      this.startNotify(schedule_question_cron, {
+      this.startNotify(schedule_question_cron.replace(/second/g, new Date().getSeconds().toString()), {
         id: id,
         question_id: quesion.quesion_id
       }, uid)

@@ -645,9 +645,9 @@ export class AuthorService {
       this.deleteNotify(author.author_id + `-${author.author_type}-` + author.id)
     } else {
       if (author.author_type === 'answer') {
-        this.startAnswerNotify(schedule_answer_cron, author, uid)
+        this.startAnswerNotify(schedule_answer_cron.replace(/second/g, new Date().getSeconds().toString()), author, uid)
       } else {
-        this.startNotify(schedule_publisher_cron, author, uid)
+        this.startNotify(schedule_publisher_cron.replace(/second/g, new Date().getSeconds().toString()), author, uid)
       }
     }
     return this.authorModel.update({
