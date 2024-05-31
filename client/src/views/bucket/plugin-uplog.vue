@@ -7,6 +7,7 @@
 import { computed, ref } from 'vue';
 import mdPreview from '@/views/plugin/md-preview.vue';
 import { PluginLoadUrl } from '@/global.config';
+import { useJudgeUnpkg } from '@/hooks/global';
 
 interface Props {
   plugin_name?: string // 插件名称
@@ -25,7 +26,7 @@ const props = withDefaults(defineProps<Props>(), {
  * 变量
  */
 const url = computed(() => {
-  return `${PluginLoadUrl}${props.plugin_name}/${props.plugin_version}/files`
+  return useJudgeUnpkg() ? `${PluginLoadUrl}${props.plugin_name}@${props.plugin_version}` : `${PluginLoadUrl}${props.plugin_name}/${props.plugin_version}/files`
 })
 const doc_md = ref('')
 

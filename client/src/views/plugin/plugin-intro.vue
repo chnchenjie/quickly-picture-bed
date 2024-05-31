@@ -48,6 +48,7 @@ import mdPreview from './md-preview.vue';
 import useConfigStore from '@/store/config'
 import { useFormat } from '@/hooks/date-time'
 import { useRoute } from 'vue-router';
+import { useJudgeUnpkg } from '@/hooks/global';
 
 interface Props {
   detail: PluginInter
@@ -67,7 +68,7 @@ const route = useRoute()
  */
 const url = computed(() => {
   const { name, version } = props.detail
-  return `${PluginLoadUrl}${name}/${version}/files`
+  return useJudgeUnpkg() ? `${PluginLoadUrl}${name}@${version}` : `${PluginLoadUrl}${name}/${version}/files`
 })
 const doc_md = ref('')
 const loading = ref(false)

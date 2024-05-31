@@ -95,7 +95,7 @@ import { BucketInter, BucketSourceConfig, UserPluginInter } from '@/typings/inte
 import { computed, reactive, Ref, ref, watch } from 'vue';
 import { PageResponse } from '@/typings/req-res';
 import Bucket from '@/types/Bucket';
-import { useCtxInstance} from '@/hooks/global';
+import { useCtxInstance, useJudgeUnpkg} from '@/hooks/global';
 import Plugin from '@/types/Plugin';
 import { PluginLoadUrl } from '@/global.config'
 import pluginReadme from './plugin-readme.vue';
@@ -233,7 +233,7 @@ const handleData = (user_plugin_id: number | string) => {
     // 这里需要使用用户安装的插件
     const { plugin: {name}, version } = current_plugin.value
     // 动态加载模块：添加随机数，避免模块不重复加载
-    const url = `${PluginLoadUrl}${name}/${version}/files/dist/index.js`
+    const url = useJudgeUnpkg() ? `${PluginLoadUrl}${name}@${version}/dist/index.js` : `${PluginLoadUrl}${name}/${version}/files/dist/index.js`
     loading.value = true
     import(/* @vite-ignore */url + `?time=` + Math.random())
       .then((res: { default }) => {

@@ -3,7 +3,7 @@ import { getCurrentInstance, nextTick, Ref } from "vue";
 import { ElMessageBox } from 'element-plus';
 import { useClipboard } from '@vueuse/core';
 import { useFileName } from './date-time';
-import { mimeTypes } from '@/global.config';
+import { mimeTypes, PluginLoadUrl } from '@/global.config';
 import useUserStore from '@/store/user';
 import md5 from 'md5'
 import Sortable from 'sortablejs'
@@ -398,4 +398,8 @@ export function useDragSort (el: HTMLElement, data: Array<any>, callBack: Functi
       // const toIndex = data.findIndex(el => el.id === to.id)
     },
   })
+}
+
+export function useJudgeUnpkg () {
+  return PluginLoadUrl.indexOf('unpkg.com') !== -1
 }

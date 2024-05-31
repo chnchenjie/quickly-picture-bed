@@ -13,6 +13,7 @@ import Plugin from './types/Plugin';
 import { PluginInter } from './typings/interface';
 import { PluginLoadUrl } from './global.config';
 import defaultTheme from './default-theme'
+import { useJudgeUnpkg } from './hooks/global';
 
 /**
  * 实例
@@ -46,7 +47,7 @@ watch(() => userStore.user_habits.data, (val) => {
     if (val.current_theme && val.current_theme.id && val.current_theme.plugin_id) {
       plugin.detail(val.current_theme.plugin_id).then((res: PluginInter) => {
         const { name, user_plugin: { version } } = res
-        const url = `${PluginLoadUrl}${name}/${version}/files/dist/main.js`
+        const url = useJudgeUnpkg() ? `${PluginLoadUrl}${name}@${version}/dist/main.js` : `${PluginLoadUrl}${name}/${version}/files/dist/main.js`
         fetch(url).then(res => res.text()).then(async (res) => {
           const plugin = new Function(res)
           plugin()

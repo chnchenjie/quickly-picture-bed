@@ -68,7 +68,8 @@ export const mimeTypes = {
 
 
 // https://registry.npmmirror.com/${plugin.name}/${plugin.version}/files/dist/index.umd.js
-export const PluginLoadUrl = 'https://registry.npmmirror.com/'
+// https://unpkg.com/@itchenliang/picture-rollup-oss-plugin@1.0.13/dist/index.umd.js
+export const PluginLoadUrl = 'https://unpkg.com/'
 export const npmRegistry = 'https://registry.npmmirror.com'
 
 

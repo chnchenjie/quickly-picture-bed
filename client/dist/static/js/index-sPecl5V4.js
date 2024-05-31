@@ -1,0 +1,1 @@
+import{_ as o}from"./index-TExW8zL1.js";import{v as r,o as t,p as n}from"./vendor-GbG8F5IP.js";const c={};function s(_,a){const e=t("router-view");return n(),r(e)}const i=o(c,[["render",s]]);export{i as default};

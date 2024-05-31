@@ -4,6 +4,7 @@
 </template>
 <script lang="ts" setup>
 import { PluginLoadUrl } from '@/global.config';
+import { useJudgeUnpkg } from '@/hooks/global';
 import { PluginInter } from '@/typings/interface';
 import { computed } from 'vue';
 interface Props {
@@ -13,7 +14,7 @@ const props = withDefaults(defineProps<Props>(), {
   detail: () => ({} as PluginInter)
 })
 const url = computed(() => {
-  return `${PluginLoadUrl}${props.detail.name}/${props.detail.user_plugin.version}/files`
+  return useJudgeUnpkg() ? `${PluginLoadUrl}${props.detail.name}@${props.detail.user_plugin.version}` : `${PluginLoadUrl}${props.detail.name}/${props.detail.user_plugin.version}/files`
 })
 
 function resolvePlugin () {
