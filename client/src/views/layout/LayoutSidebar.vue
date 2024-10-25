@@ -109,7 +109,7 @@ watch(() => route, (val) => {
       color: var(--el-color-primary) !important;
     }
     &:not(.is-active):hover {
-      background: none;
+      background: var(--el-color-primary-light-9);
     }
   }
 }

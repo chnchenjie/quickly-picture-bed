@@ -30,7 +30,7 @@ console.log(process.env.NODE_ENV)
     ConfigModule.forRoot({
       envFilePath: {
         development: ['.env.dev'],
-        production: ['.env']
+        production: ['.env.dev']
       }[process.env.NODE_ENV || 'production'], // 自定义环境变量文件路径
       // 是否是全局模块
       isGlobal: true,
@@ -40,16 +40,27 @@ console.log(process.env.NODE_ENV)
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
         return {
-          dialect: 'mysql',
+          dialect: 'mariadb',// 数据库类型
           host: configService.get<string>('DB_HOST'),
           port: configService.get<number>('DB_PORT'),
           username: configService.get<string>('DB_USERNAME'),
           password: configService.get<string>('DB_PASSWORD'),
           database: configService.get<string>('DB_DATABASE'),
-          synchronize: true,
-          autoLoadModels: true,
-          retryDelay: 500,
-          retryAttempts: 10,
+          // synchronize: true,// 是否自动同步数据库表结构
+          autoLoadModels: true,// 是否自动加载模型
+          retryDelay: 500,// 重试延迟
+          retryAttempts: 10,// 重试次数
+          // 连接池配置
+          pool: {
+            max: 5,// 最大连接数
+            min: 0,// 最小连接数
+            acquire: 30000,// 获取连接最大等待时间
+            idle: 10000,// 闲置时间
+          },
+          // 数据库连接配置
+          dialectOptions: {
+            connectTimeout: 30000// 连接超时时间
+          },
         }
       },
       inject: [ConfigService]

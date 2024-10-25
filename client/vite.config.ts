@@ -4,7 +4,19 @@ import path from 'node:path'
 
 export default defineConfig({
   server: {
-    port: 5174
+    port: 5174,
+    proxy: {
+      '/v1': {
+        target: 'http://localhost:40001',
+        changeOrigin: true,
+        // rewrite: (path) => path.replace(/^\/v1/, '')
+      },
+      '/public': {
+        target: 'http://localhost:40001',
+        changeOrigin: true,
+        // rewrite: (path) => path.replace(/^\/public/, '')
+      }
+    }
   },
   build: {
     outDir: 'dist',

@@ -40,6 +40,20 @@ export class PluginLoaderService {
     const { data: scriptContent } = registry.indexOf('unpkg.com') !== -1 ? await axios.get(`${process.env.NPM_REGISTRY}/${plugin.name}@${plugin.version}/dist/index.umd.js`) : await axios.get(`${process.env.NPM_REGISTRY}/${plugin.name}/${plugin.version}/files/dist/index.umd.js`)
     // const scriptContent = fs.readFileSync(path.join(__dirname, './plugin.js')).toString()
     // 这里需要注意：如果需要Nodejs其他内置模块功能则需要传入方可使用，否则需要在插件中自行安装其他第三方插件代替
+    /**
+     * The sandbox object used for plugin execution.
+     * @typedef {Object} SandboxInter
+     * @property {Buffer} Buffer - The Buffer class for internal plugin use.
+     * @property {FormData} FormData - The FormData class for internal plugin use.
+     * @property {Error} Error - The Error class for internal plugin use.
+     * @property {import('axios').AxiosStatic} axios - The axios library for making HTTP requests.
+     * @property {import('stream').Stream} stream - The stream module for working with streams.
+     * @property {import('fs')} fs - The fs module for working with the file system.
+     * @property {import('path')} path - The path module for working with file paths.
+     * @property {number} port - The port number from the environment variable APP_PORT.
+     * @property {Object} console - The console object with a custom log function.
+     * @property {Function} console.log - The custom log function that passes the output to a callback for processing.
+     */
     const sandbox: SandboxInter = {
       Buffer: Buffer, // 插件内部需要使用Buffer功能
       FormData: FormData, // 插件内部需要使用formData
